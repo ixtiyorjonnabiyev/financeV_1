@@ -32,6 +32,9 @@ import { generateFullReport } from '@/lib/finance';
 import { TRANSLATIONS } from '@/lib/i18n';
 import { BUSINESS_TYPES, CATEGORIES_META, getCategoryMeta } from '@/lib/categories';
 import { parseAiContent, ParsedAiResult } from '@/lib/aiParser';
+import { CustomSelect, SelectOption } from '@/components/ui/CustomSelect';
+import { CustomDatePicker } from '@/components/ui/CustomDatePicker';
+import { CustomMonthFilter } from '@/components/ui/CustomMonthFilter';
 
 export default function FinanceAppPage() {
   const [lang, setLang] = useState<Language>('uz');
@@ -54,6 +57,7 @@ export default function FinanceAppPage() {
   // Dialogs
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState<boolean>(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [modalCoType, setModalCoType] = useState<OrganizationType>('shop');
 
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [aiInputText, setAiInputText] = useState<string>('');
@@ -93,6 +97,46 @@ export default function FinanceAppPage() {
     if (!currentCompany) return null;
     return generateFullReport(currentCompany, transactions, fromMonth, toMonth);
   }, [currentCompany, transactions, fromMonth, toMonth]);
+
+  const categoryOptions: SelectOption[] = useMemo(() => {
+    if (!currentCompany) return [];
+    const typeDef = BUSINESS_TYPES[currentCompany.type] || BUSINESS_TYPES.other;
+    const cats = txType === 'income' ? typeDef.income : typeDef.expense;
+    return cats.map(catKey => {
+      const meta = CATEGORIES_META[catKey];
+      const isPl = !!meta?.pl;
+      return {
+        value: catKey,
+        label: meta?.[lang] || catKey.replace(/_/g, ' '),
+        badge: isPl ? 'P&L' : 'Balans',
+        badgeColor: isPl 
+          ? 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300' 
+          : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+      };
+    });
+  }, [currentCompany, txType, lang]);
+
+  const txTypeOptions: SelectOption[] = useMemo(() => [
+    {
+      value: 'income',
+      label: `${t.income} (+)`,
+      badge: '+',
+      badgeColor: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+    },
+    {
+      value: 'expense',
+      label: `${t.expense} (-)`,
+      badge: '-',
+      badgeColor: 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+    }
+  ], [t.income, t.expense]);
+
+  const companyOptions: SelectOption[] = useMemo(() => {
+    return companies.map(c => ({
+      value: c.id,
+      label: `${c.name} (${BUSINESS_TYPES[c.type]?.name[lang] || c.type})`
+    }));
+  }, [companies, lang]);
 
   const handleSelectCompany = (id: string) => {
     setSelectedCoId(id);
@@ -287,26 +331,22 @@ export default function FinanceAppPage() {
           </Link>
 
           {/* Company Selector */}
-          <div className="relative">
-            <select
+          <div className="w-48 sm:w-64">
+            <CustomSelect
+              options={companyOptions}
               value={selectedCoId}
-              onChange={(e) => handleSelectCompany(e.target.value)}
-              className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-sm py-1.5 pl-3 pr-8 rounded-xl border border-slate-300 dark:border-slate-700 outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-            >
-              {companies.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({BUSINESS_TYPES[c.type]?.name[lang] || c.type})
-                </option>
-              ))}
-            </select>
+              onChange={handleSelectCompany}
+              placeholder="Kompaniya tanlang"
+            />
           </div>
 
           <button
             onClick={() => {
               setEditingCompany(null);
+              setModalCoType('shop');
               setIsCompanyModalOpen(true);
             }}
-            className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 hover:bg-sky-200 text-xs font-semibold flex items-center gap-1 transition-all"
+            className="h-[42px] px-3 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 hover:bg-sky-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
             title={t.newCompany}
           >
             <Plus className="w-4 h-4" />
@@ -317,9 +357,10 @@ export default function FinanceAppPage() {
             <button
               onClick={() => {
                 setEditingCompany(currentCompany);
+                setModalCoType(currentCompany.type);
                 setIsCompanyModalOpen(true);
               }}
-              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold flex items-center gap-1 transition-all"
+              className="h-[42px] px-3 rounded-xl border border-slate-300 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
               title={t.edit}
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -461,80 +502,71 @@ export default function FinanceAppPage() {
           <form onSubmit={handleSaveTransaction} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Date */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 block mb-1">{t.date}</label>
-              <input
-                type="date"
-                required
+              <CustomDatePicker
                 value={txDate}
-                onChange={(e) => setTxDate(e.target.value)}
-                className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500"
+                onChange={setTxDate}
+                label={t.date}
               />
             </div>
 
             {/* Type */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 block mb-1">{t.type}</label>
-              <select
+              <CustomSelect
+                options={txTypeOptions}
                 value={txType}
-                onChange={(e) => setTxType(e.target.value as 'income' | 'expense')}
-                className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-              >
-                <option value="income">{t.income} (+)</option>
-                <option value="expense">{t.expense} (-)</option>
-              </select>
+                onChange={(v) => setTxType(v as 'income' | 'expense')}
+                label={t.type}
+              />
             </div>
 
             {/* Category */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 block mb-1">{t.category}</label>
-              <select
+              <CustomSelect
+                options={categoryOptions}
                 value={txCategory}
-                onChange={(e) => setTxCategory(e.target.value)}
-                className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-              >
-                {currentCompany && (
-                  (txType === 'income' 
-                    ? (BUSINESS_TYPES[currentCompany.type] || BUSINESS_TYPES.other).income 
-                    : (BUSINESS_TYPES[currentCompany.type] || BUSINESS_TYPES.other).expense
-                  ).map(catKey => (
-                    <option key={catKey} value={catKey}>
-                      {CATEGORIES_META[catKey]?.[lang] || catKey.replace(/_/g, ' ')}
-                    </option>
-                  ))
-                )}
-              </select>
+                onChange={setTxCategory}
+                label={t.category}
+                placeholder="Kategoriya tanlang"
+              />
             </div>
 
             {/* Amount */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 block mb-1">{t.amount} ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                required
-                placeholder="0.00"
-                value={txAmount}
-                onChange={(e) => setTxAmount(e.target.value)}
-                className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500"
-              />
+              <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                {t.amount} ($)
+              </label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-sm font-semibold text-slate-400 select-none">$</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0.01"
+                  required
+                  placeholder="0.00"
+                  value={txAmount}
+                  onChange={(e) => setTxAmount(e.target.value)}
+                  className="w-full h-[42px] pl-7 pr-3 text-sm font-semibold bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all text-slate-900 dark:text-slate-100 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-xs"
+                />
+              </div>
             </div>
 
             {/* Note & Submit */}
             <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
               <div className="flex-1">
-                <label className="text-[11px] font-semibold text-slate-500 block mb-1">{t.note}</label>
+                <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                  {t.note}
+                </label>
                 <input
                   type="text"
                   placeholder="Izoh..."
                   value={txNote}
                   onChange={(e) => setTxNote(e.target.value)}
-                  className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full h-[42px] px-3 text-sm bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all text-slate-900 dark:text-slate-100 shadow-xs"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-sky-600 hover:bg-sky-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 shrink-0"
+                className="h-[42px] px-5 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold text-sm rounded-xl transition-all shadow-sm flex items-center justify-center shrink-0 cursor-pointer"
               >
                 {editingTxId ? t.save : t.save}
               </button>
@@ -543,46 +575,19 @@ export default function FinanceAppPage() {
         </div>
 
         {/* 4. Period Filter Bar */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-4 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
-            <Calendar className="w-4 h-4 text-sky-600" />
-            <span>{t.filterPeriod}:</span>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap text-xs">
-            <label className="flex items-center gap-1.5">
-              <span className="text-slate-500">{t.fromMonth}:</span>
-              <input
-                type="month"
-                value={fromMonth}
-                onChange={(e) => setFromMonth(e.target.value)}
-                className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 outline-none"
-              />
-            </label>
-
-            <label className="flex items-center gap-1.5">
-              <span className="text-slate-500">{t.toMonth}:</span>
-              <input
-                type="month"
-                value={toMonth}
-                onChange={(e) => setToMonth(e.target.value)}
-                className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 outline-none"
-              />
-            </label>
-
-            {(fromMonth || toMonth) && (
-              <button
-                onClick={() => {
-                  setFromMonth('');
-                  setToMonth('');
-                }}
-                className="text-xs text-sky-600 hover:underline font-semibold ml-2"
-              >
-                {t.reset}
-              </button>
-            )}
-          </div>
-        </div>
+        <CustomMonthFilter
+          fromMonth={fromMonth}
+          toMonth={toMonth}
+          onChange={(from, to) => {
+            setFromMonth(from);
+            setToMonth(to);
+          }}
+          onReset={() => {
+            setFromMonth('');
+            setToMonth('');
+          }}
+          availableMonths={report?.months_list || []}
+        />
 
         {/* 5. Three Core IFRS Financial Statements */}
         {report && (
@@ -822,14 +827,23 @@ export default function FinanceAppPage() {
             </h3>
 
             <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
               <input
                 type="text"
                 placeholder={t.search}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full h-[38px] text-xs bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl pl-9 pr-8 py-2 outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-slate-900 dark:text-slate-100 shadow-xs transition-all"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-2.5 p-0.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -977,82 +991,83 @@ export default function FinanceAppPage() {
 
             <form onSubmit={handleSaveCompany} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-500 block mb-1">{t.name}</label>
+                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">{t.name}</label>
                 <input
                   type="text"
                   name="name"
                   required
+                  placeholder="Kompaniya nomi..."
                   defaultValue={editingCompany?.name || ''}
-                  className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full h-[42px] text-sm bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-slate-900 dark:text-slate-100 shadow-xs transition-all"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 block mb-1">{t.orgType}</label>
-                <select
-                  name="type"
-                  defaultValue={editingCompany?.type || 'shop'}
-                  className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-                >
-                  {(Object.keys(BUSINESS_TYPES) as OrganizationType[]).map(k => (
-                    <option key={k} value={k}>{BUSINESS_TYPES[k].name[lang]}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  options={(Object.keys(BUSINESS_TYPES) as OrganizationType[]).map(k => ({
+                    value: k,
+                    label: BUSINESS_TYPES[k].name[lang]
+                  }))}
+                  value={modalCoType}
+                  onChange={(val) => setModalCoType(val as OrganizationType)}
+                  label={t.orgType}
+                />
+                <input type="hidden" name="type" value={modalCoType} />
               </div>
 
               <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">{t.opening}</span>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] text-slate-500 block mb-1">{t.openingCash}</label>
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">{t.openingCash} ($)</label>
                     <input
                       type="number"
                       name="opening_cash"
-                      step="0.01"
+                      step="any"
                       defaultValue={editingCompany?.opening_cash || 0}
-                      className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5"
+                      className="w-full h-[38px] text-xs font-semibold bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-slate-900 dark:text-slate-100 shadow-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-slate-500 block mb-1">{t.openingFixedAssets}</label>
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">{t.openingFixedAssets} ($)</label>
                     <input
                       type="number"
                       name="opening_fixed_assets"
-                      step="0.01"
+                      step="any"
                       defaultValue={editingCompany?.opening_fixed_assets || 0}
-                      className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5"
+                      className="w-full h-[38px] text-xs font-semibold bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-slate-900 dark:text-slate-100 shadow-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-slate-500 block mb-1">{t.openingLoans}</label>
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">{t.openingLoans} ($)</label>
                     <input
                       type="number"
                       name="opening_loans"
-                      step="0.01"
+                      step="any"
                       defaultValue={editingCompany?.opening_loans || 0}
-                      className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5"
+                      className="w-full h-[38px] text-xs font-semibold bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-slate-900 dark:text-slate-100 shadow-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-slate-500 block mb-1">{t.openingEquity}</label>
+                    <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">{t.openingEquity} ($)</label>
                     <input
                       type="number"
                       name="opening_equity"
-                      step="0.01"
+                      step="any"
                       defaultValue={editingCompany?.opening_equity || 0}
-                      className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5"
+                      className="w-full h-[38px] text-xs font-semibold bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-slate-900 dark:text-slate-100 shadow-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] text-slate-500 block mb-1">{t.shareCount}</label>
+                <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">{t.shareCount}</label>
                 <input
                   type="number"
                   name="share_count"
                   defaultValue={editingCompany?.share_count || 1000}
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5"
+                  className="w-full h-[38px] text-xs font-semibold bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 text-slate-900 dark:text-slate-100 shadow-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
                 />
               </div>
 
