@@ -1,0 +1,120 @@
+import { CategoryMeta, OrganizationType, TypeDefinition } from './types';
+
+export const BUSINESS_TYPES: Record<OrganizationType, TypeDefinition> = {
+  shop: {
+    name: { uz: "Do'kon", ru: "Магазин", en: "Shop" },
+    income: ["retail_sales", "wholesale_sales", "online_sales", "rent_income", "interest", "loan_in", "other_income"],
+    expense: ["goods_purchase", "salaries", "rent", "utilities", "packaging", "transport", "marketing", "taxes", "equipment", "maintenance", "loan_out", "bank_fees", "owner_withdrawal", "other_expense"]
+  },
+  manufacturer: {
+    name: { uz: "Ishlab chiqarish korxonasi", ru: "Производство", en: "Manufacturer" },
+    income: ["sales_products", "wholesale_sales", "online_sales", "by_products", "contracts", "grants", "loan_in", "investment", "other_income"],
+    expense: ["raw_materials", "packaging", "salaries", "social_tax", "electricity", "utilities", "equipment", "maintenance", "transport", "fuel", "rent", "marketing", "taxes", "licenses", "insurance", "loan_out", "other_expense"]
+  },
+  company: {
+    name: { uz: "Xizmat kompaniyasi", ru: "Сервисная компания", en: "Service company" },
+    income: ["service_fees", "contracts", "subscriptions", "commission", "investment", "loan_in", "interest", "other_income"],
+    expense: ["salaries", "social_tax", "rent", "office", "software", "marketing", "training", "transport", "subcontractors", "taxes", "insurance", "loan_out", "bank_fees", "other_expense"]
+  },
+  restaurant: {
+    name: { uz: "Restoran / kafe", ru: "Ресторан / кафе", en: "Restaurant / café" },
+    income: ["food_sales", "online_sales", "rent_income", "loan_in", "other_income"],
+    expense: ["food_ingredients", "salaries", "rent", "utilities", "packaging", "equipment", "maintenance", "marketing", "taxes", "licenses", "loan_out", "other_expense"]
+  },
+  farm: {
+    name: { uz: "Fermer xo'jaligi", ru: "Фермерское хозяйство", en: "Farm" },
+    income: ["crop_sales", "livestock_sales", "by_products", "grants", "loan_in", "other_income"],
+    expense: ["seeds_fertilizer", "feed", "salaries", "fuel", "equipment", "maintenance", "electricity", "transport", "rent", "taxes", "insurance", "loan_out", "other_expense"]
+  },
+  education: {
+    name: { uz: "Ta'lim muassasasi", ru: "Образовательное учреждение", en: "Education" },
+    income: ["tuition", "grants", "donations", "service_fees", "rent_income", "other_income"],
+    expense: ["salaries", "teaching_materials", "rent", "utilities", "software", "training", "marketing", "taxes", "equipment", "other_expense"]
+  },
+  construction: {
+    name: { uz: "Qurilish", ru: "Строительство", en: "Construction" },
+    income: ["contracts", "service_fees", "loan_in", "investment", "other_income"],
+    expense: ["materials_build", "subcontractors", "salaries", "social_tax", "equipment", "fuel", "transport", "rent", "licenses", "insurance", "taxes", "loan_out", "other_expense"]
+  },
+  nonprofit: {
+    name: { uz: "Notijorat tashkilot", ru: "Некоммерческая организация", en: "Non-profit" },
+    income: ["donations", "grants", "service_fees", "interest", "other_income"],
+    expense: ["salaries", "rent", "office", "marketing", "training", "transport", "software", "taxes", "other_expense"]
+  },
+  individual: {
+    name: { uz: "Yakka tadbirkor", ru: "Индивидуальный предприниматель", en: "Sole proprietor" },
+    income: ["service_fees", "contracts", "online_sales", "commission", "other_income"],
+    expense: ["software", "marketing", "transport", "office", "taxes", "rent", "owner_withdrawal", "other_expense"]
+  },
+  other: {
+    name: { uz: "Boshqa", ru: "Другое", en: "Other" },
+    income: ["sales_products", "service_fees", "investment", "loan_in", "other_income"],
+    expense: ["raw_materials", "goods_purchase", "salaries", "rent", "utilities", "marketing", "transport", "taxes", "loan_out", "other_expense"]
+  }
+};
+
+export const CATEGORIES_META: Record<string, CategoryMeta> = {
+  sales_products: { uz: "Mahsulot sotuvi", ru: "Продажа продукции", en: "Product sales", pl: "revenue", cf: "operating", bs: null },
+  retail_sales: { uz: "Chakana savdo", ru: "Розничные продажи", en: "Retail sales", pl: "revenue", cf: "operating", bs: null },
+  wholesale_sales: { uz: "Ulgurji savdo", ru: "Оптовые продажи", en: "Wholesale sales", pl: "revenue", cf: "operating", bs: null },
+  online_sales: { uz: "Onlayn sotuv", ru: "Онлайн-продажи", en: "Online sales", pl: "revenue", cf: "operating", bs: null },
+  service_fees: { uz: "Xizmat haqi", ru: "Плата за услуги", en: "Service fees", pl: "revenue", cf: "operating", bs: null },
+  contracts: { uz: "Shartnoma tushumlari", ru: "Поступления по контрактам", en: "Contract revenue", pl: "revenue", cf: "operating", bs: null },
+  subscriptions: { uz: "Obunalar", ru: "Подписки", en: "Subscriptions", pl: "revenue", cf: "operating", bs: null },
+  tuition: { uz: "O'qish to'lovlari", ru: "Оплата обучения", en: "Tuition fees", pl: "revenue", cf: "operating", bs: null },
+  food_sales: { uz: "Taom va ichimlik sotuvi", ru: "Продажа еды и напитков", en: "Food & drink sales", pl: "revenue", cf: "operating", bs: null },
+  crop_sales: { uz: "Hosil sotuvi", ru: "Продажа урожая", en: "Crop sales", pl: "revenue", cf: "operating", bs: null },
+  livestock_sales: { uz: "Chorva mahsuloti sotuvi", ru: "Продажа продукции животноводства", en: "Livestock sales", pl: "revenue", cf: "operating", bs: null },
+  by_products: { uz: "Qo'shimcha mahsulot sotuvi", ru: "Продажа побочной продукции", en: "By-product sales", pl: "revenue", cf: "operating", bs: null },
+  rent_income: { uz: "Ijara daromadi", ru: "Доход от аренды", en: "Rental income", pl: "other_income", cf: "operating", bs: null },
+  commission: { uz: "Komissiya", ru: "Комиссионные", en: "Commission", pl: "revenue", cf: "operating", bs: null },
+  grants: { uz: "Grant va subsidiyalar", ru: "Гранты и субсидии", en: "Grants & subsidies", pl: "other_income", cf: "operating", bs: null },
+  donations: { uz: "Xayriya", ru: "Пожертвования", en: "Donations", pl: "other_income", cf: "operating", bs: null },
+  interest: { uz: "Foiz daromadi", ru: "Процентный доход", en: "Interest income", pl: "finance_income", cf: "investing", bs: null },
+  loan_in: { uz: "Kredit/qarz olindi", ru: "Полученный кредит/заём", en: "Loan received", pl: null, cf: "financing", bs: "loan_in" },
+  investment: { uz: "Investitsiya", ru: "Инвестиции", en: "Investment", pl: null, cf: "financing", bs: "equity_contribution" },
+  other_income: { uz: "Boshqa kirim", ru: "Прочие доходы", en: "Other income", pl: "other_income", cf: "operating", bs: null },
+  raw_materials: { uz: "Xom ashyo", ru: "Сырьё и материалы", en: "Raw materials", pl: "cogs", cf: "operating", bs: null },
+  packaging: { uz: "Qadoqlash", ru: "Упаковка", en: "Packaging", pl: "cogs", cf: "operating", bs: null },
+  goods_purchase: { uz: "Tovar xaridi", ru: "Закупка товаров", en: "Goods purchase", pl: "cogs", cf: "operating", bs: null },
+  salaries: { uz: "Xodimlar maoshi", ru: "Зарплата сотрудников", en: "Employee salaries", pl: "opex", cf: "operating", bs: null },
+  taxes: { uz: "Soliqlar", ru: "Налоги", en: "Taxes", pl: "tax", cf: "operating", bs: null },
+  social_tax: { uz: "Ijtimoiy to'lovlar", ru: "Социальные отчисления", en: "Social contributions", pl: "opex", cf: "operating", bs: null },
+  rent: { uz: "Ijara", ru: "Аренда", en: "Rent", pl: "opex", cf: "operating", bs: null },
+  utilities: { uz: "Kommunal xizmatlar", ru: "Коммунальные услуги", en: "Utilities", pl: "opex", cf: "operating", bs: null },
+  electricity: { uz: "Elektr energiyasi", ru: "Электроэнергия", en: "Electricity", pl: "opex", cf: "operating", bs: null },
+  equipment: { uz: "Uskuna va jihozlar", ru: "Оборудование", en: "Equipment", pl: null, cf: "investing", bs: "fixed_asset" },
+  maintenance: { uz: "Ta'mirlash va xizmat ko'rsatish", ru: "Ремонт и обслуживание", en: "Repairs & maintenance", pl: "opex", cf: "operating", bs: null },
+  transport: { uz: "Transport va logistika", ru: "Транспорт и логистика", en: "Transport & logistics", pl: "opex", cf: "operating", bs: null },
+  fuel: { uz: "Yoqilg'i", ru: "Топливо", en: "Fuel", pl: "opex", cf: "operating", bs: null },
+  marketing: { uz: "Marketing va reklama", ru: "Маркетинг и реклама", en: "Marketing & advertising", pl: "opex", cf: "operating", bs: null },
+  software: { uz: "Dasturlar va xosting", ru: "ПО и хостинг", en: "Software & hosting", pl: "opex", cf: "operating", bs: null },
+  office: { uz: "Ofis xarajatlari", ru: "Офисные расходы", en: "Office expenses", pl: "opex", cf: "operating", bs: null },
+  training: { uz: "O'qitish va kurslar", ru: "Обучение персонала", en: "Staff training", pl: "opex", cf: "operating", bs: null },
+  insurance: { uz: "Sug'urta", ru: "Страхование", en: "Insurance", pl: "opex", cf: "operating", bs: null },
+  loan_out: { uz: "Kredit to'lovi", ru: "Погашение кредита", en: "Loan repayment", pl: null, cf: "financing", bs: "loan_out" },
+  bank_fees: { uz: "Bank komissiyasi", ru: "Банковские комиссии", en: "Bank fees", pl: "finance_cost", cf: "operating", bs: null },
+  seeds_fertilizer: { uz: "Urug' va o'g'it", ru: "Семена и удобрения", en: "Seeds & fertilizer", pl: "cogs", cf: "operating", bs: null },
+  feed: { uz: "Chorva ozuqasi", ru: "Корм для скота", en: "Animal feed", pl: "cogs", cf: "operating", bs: null },
+  food_ingredients: { uz: "Oziq-ovqat mahsulotlari", ru: "Продукты питания", en: "Food ingredients", pl: "cogs", cf: "operating", bs: null },
+  subcontractors: { uz: "Pudratchilar", ru: "Подрядчики", en: "Subcontractors", pl: "cogs", cf: "operating", bs: null },
+  materials_build: { uz: "Qurilish materiallari", ru: "Строительные материалы", en: "Building materials", pl: "cogs", cf: "operating", bs: null },
+  teaching_materials: { uz: "O'quv materiallari", ru: "Учебные материалы", en: "Teaching materials", pl: "opex", cf: "operating", bs: null },
+  licenses: { uz: "Litsenziya va ruxsatnomalar", ru: "Лицензии и разрешения", en: "Licenses & permits", pl: "opex", cf: "operating", bs: null },
+  owner_withdrawal: { uz: "Egasi olib qo'ygan pul", ru: "Изъятие владельцем", en: "Owner withdrawal", pl: null, cf: "financing", bs: "equity_withdrawal" },
+  other_expense: { uz: "Boshqa chiqim", ru: "Прочие расходы", en: "Other expense", pl: "other_expense", cf: "operating", bs: null }
+};
+
+export function getCategoryMeta(categoryKey: string, type: 'income' | 'expense'): CategoryMeta {
+  if (CATEGORIES_META[categoryKey]) {
+    return CATEGORIES_META[categoryKey];
+  }
+  return {
+    uz: categoryKey,
+    ru: categoryKey,
+    en: categoryKey,
+    pl: type === 'income' ? 'other_income' : 'other_expense',
+    cf: 'operating',
+    bs: null
+  };
+}

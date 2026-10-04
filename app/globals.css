@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+:root {
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Premium Financial Palette */
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --border-main: #e2e8f0;
+  --border-focus: #0284c7;
+
+  /* Financial Accents */
+  --color-in: #059669;
+  --color-in-bg: #ecfdf5;
+  --color-out: #dc2626;
+  --color-out-bg: #fef2f2;
+  --color-gold: #d97706;
+  --color-gold-bg: #fffbeb;
+  --color-primary: #0284c7;
+  --color-primary-hover: #0369a1;
+  --color-primary-bg: #e0f2fe;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-main: #0b0f19;
+    --bg-card: #131b2e;
+    --bg-card-subtle: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-subtle: #64748b;
+    --border-main: #1e293b;
+    --border-focus: #38bdf8;
+
+    --color-in: #10b981;
+    --color-in-bg: rgba(16, 185, 129, 0.12);
+    --color-out: #ef4444;
+    --color-out-bg: rgba(239, 68, 68, 0.12);
+    --color-gold: #fbbf24;
+    --color-gold-bg: rgba(251, 191, 36, 0.12);
+    --color-primary: #38bdf8;
+    --color-primary-hover: #0284c7;
+    --color-primary-bg: rgba(56, 189, 248, 0.12);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Financial numbers */
+.num-font {
+  font-family: var(--font-serif);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Custom Table Responsive Container */
+.table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-main);
+  background: var(--bg-card);
+}
+
+.table-scroll-container table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 580px;
+}
+
+.table-scroll-container th,
+.table-scroll-container td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-main);
+  font-size: 0.875rem;
+}
+
+.table-scroll-container th {
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+
+.table-scroll-container th.num-col,
+.table-scroll-container td.num-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sticky first column on horizontal scroll */
+.table-scroll-container td:first-child,
+.table-scroll-container th:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  z-index: 10;
+}
+
+.table-scroll-container th:first-child {
+  background: var(--bg-card-subtle);
+}
+
+/* Clickable table row */
+tr.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+tr.clickable-row:hover {
+  background-color: var(--color-primary-bg) !important;
+}
+
+tr.total-row td {
+  font-weight: 700;
+  border-top: 1.5px solid var(--border-main);
+  background-color: var(--bg-card-subtle);
+}
+
+tr.grand-total-row td {
+  font-weight: 800;
+  border-top: 2px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+  background-color: var(--color-primary-bg);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-main);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
