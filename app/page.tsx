@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Building2, 
@@ -15,23 +15,35 @@ import {
   BarChart3, 
   TrendingUp, 
   Scale, 
-  Wallet,
-  Globe2,
-  Sparkles,
-  ShoppingBag,
-  Factory,
-  Utensils,
-  Tractor,
-  HardHat,
+  Wallet, 
+  Globe2, 
+  Sparkles, 
+  ShoppingBag, 
+  Factory, 
+  Utensils, 
+  Tractor, 
+  HardHat, 
   GraduationCap
 } from 'lucide-react';
 import { Language, OrganizationType } from '@/lib/types';
 import { TRANSLATIONS } from '@/lib/i18n';
-import { BUSINESS_TYPES } from '@/lib/categories';
+import { BUSINESS_TYPES, CATEGORIES_META } from '@/lib/categories';
+import { Storage } from '@/lib/storage';
 
 export default function LandingPage() {
   const [lang, setLang] = useState<Language>('uz');
   const [selectedIndustry, setSelectedIndustry] = useState<OrganizationType>('shop');
+
+  useEffect(() => {
+    const saved = Storage.getLanguage();
+    setLang(saved);
+  }, []);
+
+  const handleSelectLang = (l: Language) => {
+    setLang(l);
+    Storage.setLanguage(l);
+  };
+
   const t = TRANSLATIONS[lang];
 
   const industryIcons: Record<string, React.ReactNode> = {
@@ -62,9 +74,9 @@ export default function LandingPage() {
         </div>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
-          <a href="#features" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Imkoniyatlar</a>
-          <a href="#industries" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Sohalar</a>
-          <a href="#comparison" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">Taqqoslash</a>
+          <a href="#features" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">{t.navFeatures}</a>
+          <a href="#industries" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">{t.navIndustries}</a>
+          <a href="#comparison" className="hover:text-sky-600 dark:hover:text-sky-400 transition-colors">{t.navComparison}</a>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -72,19 +84,19 @@ export default function LandingPage() {
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 text-xs font-semibold border border-slate-200 dark:border-slate-700">
             <Globe2 className="w-3.5 h-3.5 ml-1.5 mr-1 text-slate-400" />
             <button
-              onClick={() => setLang('uz')}
+              onClick={() => handleSelectLang('uz')}
               className={`px-2 py-1 rounded-md transition-all ${lang === 'uz' ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
             >
               UZ
             </button>
             <button
-              onClick={() => setLang('ru')}
+              onClick={() => handleSelectLang('ru')}
               className={`px-2 py-1 rounded-md transition-all ${lang === 'ru' ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
             >
               RU
             </button>
             <button
-              onClick={() => setLang('en')}
+              onClick={() => handleSelectLang('en')}
               className={`px-2 py-1 rounded-md transition-all ${lang === 'en' ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
             >
               EN
@@ -208,7 +220,7 @@ export default function LandingPage() {
           </div>
 
           <div className="px-6 py-3 bg-sky-50 dark:bg-sky-950/30 border-t border-sky-100 dark:border-sky-900 text-xs text-sky-800 dark:text-sky-300 flex items-center justify-between">
-            <span>Formula: <b>Aktivlar ($23,800) = Majburiyatlar ($5,500) + Kapital ($18,300)</b></span>
+            <span>{t.formulaLabel}: <b>{t.assets} ($23,800) = {t.liabilities} ($5,500) + {t.equity} ($18,300)</b></span>
             <Link href="/app" className="font-semibold underline hover:text-sky-600 flex items-center gap-1">
               <span>{t.launchApp}</span> <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -220,9 +232,9 @@ export default function LandingPage() {
       <section id="features" className="py-16 sm:py-24 bg-white dark:bg-slate-900/60 border-y border-slate-200 dark:border-slate-800 px-4 sm:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-bold text-sky-600 uppercase tracking-widest">Nega Moliya?</span>
+            <span className="text-xs font-bold text-sky-600 uppercase tracking-widest">{t.whyMoliyaBadge}</span>
             <h2 className="text-2xl sm:text-4xl font-bold font-serif text-slate-900 dark:text-white mt-2">
-              Biznesingiz uchun professional moliyaviy nazorat
+              {t.featuresHeadline}
             </h2>
           </div>
 
@@ -315,14 +327,14 @@ export default function LandingPage() {
               <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                 {BUSINESS_TYPES[selectedIndustry].name[lang]}
               </h3>
-              <p className="text-xs text-slate-500">Tayyorlangan standart toifalar va tahlillar</p>
+              <p className="text-xs text-slate-500">{t.industryBadge}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" /> {t.income} Toifalari
+                <TrendingUp className="w-4 h-4" /> {t.incomeCategories}
               </h4>
               <div className="flex flex-wrap gap-2">
                 {BUSINESS_TYPES[selectedIndustry].income.map((catKey) => (
@@ -330,7 +342,7 @@ export default function LandingPage() {
                     key={catKey}
                     className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                   >
-                    {catKey.replace(/_/g, ' ')}
+                    {CATEGORIES_META[catKey]?.[lang] || catKey.replace(/_/g, ' ')}
                   </span>
                 ))}
               </div>
@@ -338,7 +350,7 @@ export default function LandingPage() {
 
             <div>
               <h4 className="text-sm font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Scale className="w-4 h-4" /> {t.expense} Toifalari
+                <Scale className="w-4 h-4" /> {t.expenseCategories}
               </h4>
               <div className="flex flex-wrap gap-2">
                 {BUSINESS_TYPES[selectedIndustry].expense.map((catKey) => (
@@ -346,7 +358,7 @@ export default function LandingPage() {
                     key={catKey}
                     className="text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
                   >
-                    {catKey.replace(/_/g, ' ')}
+                    {CATEGORIES_META[catKey]?.[lang] || catKey.replace(/_/g, ' ')}
                   </span>
                 ))}
               </div>
@@ -361,7 +373,7 @@ export default function LandingPage() {
           <div className="text-center max-w-2xl mx-auto mb-12">
             <span className="text-xs font-bold text-sky-600 uppercase tracking-widest">{t.compareTitle}</span>
             <h2 className="text-2xl sm:text-4xl font-bold font-serif text-slate-900 dark:text-white mt-2">
-              Excel va murakkab dasturlardan afzalligi
+              {t.compareSubtitle}
             </h2>
           </div>
 
@@ -384,15 +396,15 @@ export default function LandingPage() {
                 </tr>
                 <tr>
                   <td className="font-medium">{t.compRow2}</td>
-                  <td className="text-center text-amber-500 font-semibold">Qiyin</td>
+                  <td className="text-center text-amber-500 font-semibold">{t.hardLabel}</td>
                   <td className="text-center text-rose-500"><XCircle className="w-5 h-5 mx-auto" /></td>
-                  <td className="text-center text-emerald-500 font-bold bg-sky-50/50 dark:bg-sky-950/20"><CheckCircle2 className="w-5 h-5 mx-auto" /> Juda oson</td>
+                  <td className="text-center text-emerald-500 font-bold bg-sky-50/50 dark:bg-sky-950/20"><CheckCircle2 className="w-5 h-5 mx-auto" /> {t.veryEasyLabel}</td>
                 </tr>
                 <tr>
                   <td className="font-medium">{t.compRow3}</td>
-                  <td className="text-center text-slate-500">Soatlab formulalar</td>
-                  <td className="text-center text-slate-500">1–3 oy o'rganish</td>
-                  <td className="text-center text-sky-600 font-bold bg-sky-50/50 dark:bg-sky-950/20">30 soniya</td>
+                  <td className="text-center text-slate-500">{t.hoursOfFormulas}</td>
+                  <td className="text-center text-slate-500">{t.monthsOfLearning}</td>
+                  <td className="text-center text-sky-600 font-bold bg-sky-50/50 dark:bg-sky-950/20">{t.thirtySeconds}</td>
                 </tr>
                 <tr>
                   <td className="font-medium">{t.compRow4}</td>
@@ -402,13 +414,13 @@ export default function LandingPage() {
                 </tr>
                 <tr>
                   <td className="font-medium">{t.compRow5}</td>
-                  <td className="text-center text-amber-500 font-semibold">Qo'lda</td>
+                  <td className="text-center text-amber-500 font-semibold">{t.manualLabel}</td>
                   <td className="text-center text-emerald-500"><CheckCircle2 className="w-5 h-5 mx-auto" /></td>
-                  <td className="text-center text-emerald-500 font-bold bg-sky-50/50 dark:bg-sky-950/20"><CheckCircle2 className="w-5 h-5 mx-auto" /> 100% Avtomatik</td>
+                  <td className="text-center text-emerald-500 font-bold bg-sky-50/50 dark:bg-sky-950/20"><CheckCircle2 className="w-5 h-5 mx-auto" /> {t.auto100}</td>
                 </tr>
                 <tr className="total-row">
                   <td className="font-bold">{t.compRow6}</td>
-                  <td className="text-center">$0 / Obuna</td>
+                  <td className="text-center">{t.excelPrice}</td>
                   <td className="text-center font-bold text-rose-600">$500 – $2,000+</td>
                   <td className="text-center font-bold text-emerald-600 bg-sky-50/50 dark:bg-sky-950/20">{t.freeForever}</td>
                 </tr>
@@ -422,10 +434,10 @@ export default function LandingPage() {
       <section className="py-20 px-4 sm:px-8 bg-gradient-to-b from-slate-900 to-sky-950 text-white text-center">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-5xl font-extrabold font-serif mb-6 tracking-tight">
-            Biznesingiz hisobini tartibga keltirishga tayyormisiz?
+            {t.bottomCtaTitle}
           </h2>
           <p className="text-slate-300 text-base sm:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
-            Ro'yxatdan o'tmasdan, hech qanday to'lovlarsiz hoziroq brauzeringizda boshlang.
+            {t.bottomCtaDesc}
           </p>
           <Link
             href="/app"
@@ -447,8 +459,8 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-4 text-slate-500">
             <Link href="/app" className="hover:text-sky-600">{t.dashboard}</Link>
-            <a href="#features" className="hover:text-sky-600">Imkoniyatlar</a>
-            <a href="#demo" className="hover:text-sky-600">Demo</a>
+            <a href="#features" className="hover:text-sky-600">{t.navFeatures}</a>
+            <a href="#demo" className="hover:text-sky-600">{t.demo}</a>
           </div>
         </div>
       </footer>
@@ -457,7 +469,7 @@ export default function LandingPage() {
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-2xl flex items-center justify-between">
         <div>
           <div className="font-bold text-sm text-slate-900 dark:text-white">Moliya App</div>
-          <div className="text-[11px] text-slate-500">IFRS Moliyaviy tizim</div>
+          <div className="text-[11px] text-slate-500">{t.tagline}</div>
         </div>
         <Link
           href="/app"

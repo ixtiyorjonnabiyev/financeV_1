@@ -216,3 +216,101 @@ export function parseAiContent(text: string): ParsedAiResult {
     summary: `Found ${detectedTxs.length} transactions and opening balance values.`
   };
 }
+
+export function parseCsvOrStructuredFile(content: string, fileType: string = ''): ParsedAiResult {
+  const result: ParsedAiResult = {
+    balances: { opening_cash: null, opening_fixed_assets: null, opening_loans: null, opening_equity: null },
+    transactions: [],
+    summary: ''
+  };
+
+  const trimmed = content.trim();
+
+  // 1. Try parsing JSON
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      const data = JSON.parse(trimmed);
+      const list = Array.isArray(data) ? data : (data.transactions || data.items || []);
+      for (const item of list) {
+        const amt = parseFloat(item.amount || item.summa || item.total || 0);
+        if (amt > 0) {
+          result.transactions.push({
+            date: item.date || item.sana || new Date().toISOString().slice(0, 10),
+            type: (item.type === 'income' || item.type === 'kirim') ? 'income' : 'expense',
+            category: item.category || item.toifa || 'other_expense',
+            amount: amt,
+            note: item.note || item.izoh || item.description || 'Imported JSON'
+          });
+        }
+      }
+      if (result.transactions.length > 0) {
+        result.summary = `JSON fayldan ${result.transactions.length} ta operatsiya muvaffaqiyatli yuklandi.`;
+        return result;
+      }
+    } catch {
+      // not valid JSON, proceed to CSV
+    }
+  }
+
+  // 2. Parse CSV / TSV lines
+  const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    // Detect delimiter: comma, semicolon, tab
+    const firstLine = lines[0];
+    let delimiter = ',';
+    if (firstLine.includes(';') && firstLine.split(';').length >= 3) delimiter = ';';
+    else if (firstLine.includes('\t') && firstLine.split('\t').length >= 3) delimiter = '\t';
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
+      if (cols.length >= 2) {
+        // Find date, amount, category, note among columns
+        let rowDate = new Date().toISOString().slice(0, 10);
+        let rowAmount = 0;
+        let rowType: 'income' | 'expense' = 'expense';
+        let rowCategory = 'other_expense';
+        let rowNote = '';
+
+        for (const col of cols) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(col)) {
+            rowDate = col;
+          } else if (/^\d{2}[./-]\d{2}[./-]\d{4}$/.test(col)) {
+            const parts = col.split(/[./-]/);
+            rowDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          } else {
+            const numVal = parseFloat(col.replace(/[^\d.-]/g, ''));
+            if (!isNaN(numVal) && numVal > 0 && rowAmount === 0 && /\d/.test(col)) {
+              rowAmount = numVal;
+            } else if (col.length > 1) {
+              rowNote = rowNote ? `${rowNote} - ${col}` : col;
+            }
+          }
+        }
+
+        if (rowAmount > 0) {
+          const lowerNote = rowNote.toLowerCase();
+          if (lowerNote.includes('income') || lowerNote.includes('kirim') || lowerNote.includes('sotuv') || lowerNote.includes('tushum')) {
+            rowType = 'income';
+          }
+          rowCategory = inferCategory(rowNote, rowType);
+
+          result.transactions.push({
+            date: rowDate,
+            type: rowType,
+            category: rowCategory,
+            amount: rowAmount,
+            note: rowNote.slice(0, 80) || 'CSV Entry'
+          });
+        }
+      }
+    }
+    if (result.transactions.length > 0) {
+      result.summary = `CSV fayldan ${result.transactions.length} ta operatsiya muvaffaqiyatli yuklandi.`;
+      return result;
+    }
+  }
+
+  // Fallback to general natural language parsing
+  return parseAiContent(content);
+}
+

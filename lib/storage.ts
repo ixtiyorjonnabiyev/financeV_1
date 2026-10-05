@@ -1,4 +1,4 @@
-import { Company, Transaction } from './types';
+import { Company, Language, Transaction } from './types';
 
 const STORAGE_KEYS = {
   COMPANIES: 'moliya_companies_v1',
@@ -159,6 +159,18 @@ export const Storage = {
   setSelectedCompanyId(id: string): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEYS.SELECTED_CO, id);
+  },
+
+  getLanguage(): Language {
+    if (typeof window === 'undefined') return 'uz';
+    const l = localStorage.getItem(STORAGE_KEYS.LANG) as Language;
+    if (l === 'uz' || l === 'ru' || l === 'en') return l;
+    return 'uz';
+  },
+
+  setLanguage(lang: Language): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(STORAGE_KEYS.LANG, lang);
   },
 
   exportAllData(): string {

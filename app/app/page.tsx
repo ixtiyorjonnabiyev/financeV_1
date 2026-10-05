@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { 
   Building2, 
@@ -24,7 +24,13 @@ import {
   Search, 
   X,
   FileSpreadsheet,
-  Printer
+  Printer,
+  Image as ImageIcon,
+  FileText,
+  Wifi,
+  Camera,
+  Key,
+  ChevronDown
 } from 'lucide-react';
 import { Company, FinancialReport, Language, OrganizationType, Transaction } from '@/lib/types';
 import { Storage } from '@/lib/storage';
@@ -35,9 +41,11 @@ import { parseAiContent, ParsedAiResult } from '@/lib/aiParser';
 import { CustomSelect, SelectOption } from '@/components/ui/CustomSelect';
 import { CustomDatePicker } from '@/components/ui/CustomDatePicker';
 import { CustomMonthFilter } from '@/components/ui/CustomMonthFilter';
+import { RatioAnalysisSection } from '@/components/finance/RatioAnalysisSection';
 
 export default function FinanceAppPage() {
   const [lang, setLang] = useState<Language>('uz');
+  const [activeTab, setActiveTab] = useState<'statements' | 'ratios' | 'journal'>('statements');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCoId, setSelectedCoId] = useState<string>('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -59,24 +67,46 @@ export default function FinanceAppPage() {
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [modalCoType, setModalCoType] = useState<OrganizationType>('shop');
 
+  // AI Assistant state
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [aiInputText, setAiInputText] = useState<string>('');
   const [aiResult, setAiResult] = useState<ParsedAiResult | null>(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState<boolean>(false);
+  const [clientIp, setClientIp] = useState<string>('');
+  const [aiModelUsed, setAiModelUsed] = useState<string>('');
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; type: string; content?: string; base64?: string } | null>(null);
+  const [customApiKey, setCustomApiKey] = useState<string>('');
+  const [showApiSettings, setShowApiSettings] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [drillDownAccount, setDrillDownAccount] = useState<{ key: string; label: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const t = TRANSLATIONS[lang];
 
-  // Initialize data on mount
+  // Initialize data on mount & detect client IP
   useEffect(() => {
+    const savedLang = Storage.getLanguage();
+    setLang(savedLang);
     const cos = Storage.getCompanies();
     setCompanies(cos);
     const currCoId = Storage.getSelectedCompanyId();
     setSelectedCoId(currCoId);
     setTransactions(Storage.getTransactions(currCoId));
+
+    // Detect client IP
+    fetch('/api/ai')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.clientIp) setClientIp(d.clientIp);
+      })
+      .catch(() => setClientIp('127.0.0.1'));
   }, []);
+
+  const handleLanguageChange = (newLang: Language) => {
+    setLang(newLang);
+    Storage.setLanguage(newLang);
+  };
 
   const currentCompany = useMemo(() => {
     return companies.find(c => c.id === selectedCoId) || companies[0] || null;
@@ -233,14 +263,69 @@ export default function FinanceAppPage() {
     setEditingCompany(null);
   };
 
-  const handleAiAnalyze = () => {
-    if (!aiInputText.trim()) return;
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImg = file.type.startsWith('image/');
+    if (isImg) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setUploadedFile({
+          name: file.name,
+          type: 'image',
+          base64: reader.result as string
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        setUploadedFile({
+          name: file.name,
+          type: ext === 'json' ? 'json' : ext === 'csv' ? 'csv' : 'text',
+          content: reader.result as string
+        });
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleAiAnalyze = async () => {
+    if (!aiInputText.trim() && !uploadedFile) return;
     setIsAiAnalyzing(true);
-    setTimeout(() => {
-      const res = parseAiContent(aiInputText);
-      setAiResult(res);
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiInputText,
+          fileContent: uploadedFile?.content,
+          fileType: uploadedFile?.type,
+          imageBase64: uploadedFile?.base64,
+          apiKey: customApiKey.trim() || undefined
+        })
+      });
+
+      const resJson = await response.json();
+      if (resJson.clientIp) setClientIp(resJson.clientIp);
+      if (resJson.model) setAiModelUsed(resJson.model);
+
+      if (resJson.data) {
+        setAiResult(resJson.data);
+      } else {
+        // Fallback local offline parsing
+        const localRes = parseAiContent(aiInputText || uploadedFile?.content || '');
+        setAiResult(localRes);
+      }
+    } catch (err) {
+      console.warn('AI API error, using offline parser:', err);
+      const localRes = parseAiContent(aiInputText || uploadedFile?.content || '');
+      setAiResult(localRes);
+    } finally {
       setIsAiAnalyzing(false);
-    }, 350);
+    }
   };
 
   const handleApplyAi = () => {
@@ -385,7 +470,7 @@ export default function FinanceAppPage() {
             {(['uz', 'ru', 'en'] as Language[]).map(l => (
               <button
                 key={l}
-                onClick={() => setLang(l)}
+                onClick={() => handleLanguageChange(l)}
                 className={`px-2 py-1 rounded-md uppercase transition-all ${lang === l ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 {l}
@@ -506,6 +591,7 @@ export default function FinanceAppPage() {
                 value={txDate}
                 onChange={setTxDate}
                 label={t.date}
+                lang={lang}
               />
             </div>
 
@@ -587,10 +673,59 @@ export default function FinanceAppPage() {
             setToMonth('');
           }}
           availableMonths={report?.months_list || []}
+          lang={lang}
         />
 
+        {/* Tab Navigation between Statements, Ratios, Journal */}
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('statements')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+              activeTab === 'statements'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Scale className="w-4 h-4" />
+            <span>{t.tabsStatements}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('ratios')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+              activeTab === 'ratios'
+                ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <PieChart className="w-4 h-4" />
+            <span>{t.tabsRatios}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 font-extrabold ml-1">
+              IFRS
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('journal')}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+              activeTab === 'journal'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>{t.tabsJournal}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold ml-1">
+              {filteredHistoryTxs.length}
+            </span>
+          </button>
+        </div>
+
         {/* 5. Three Core IFRS Financial Statements */}
-        {report && (
+        {report && activeTab === 'statements' && (
           <div className="space-y-6">
 
             {/* Statement 1: P&L */}
@@ -818,7 +953,13 @@ export default function FinanceAppPage() {
           </div>
         )}
 
-        {/* 6. Transactions Journal Table */}
+        {/* 6. IFRS Financial Ratio Analysis & Visual Graphs */}
+        {report && activeTab === 'ratios' && (
+          <RatioAnalysisSection report={report} lang={lang} />
+        )}
+
+        {/* 7. Transactions Journal Table */}
+        {activeTab === 'journal' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <h3 className="text-base sm:text-lg font-bold font-serif text-slate-900 dark:text-white flex items-center gap-2">
@@ -907,6 +1048,7 @@ export default function FinanceAppPage() {
             </table>
           </div>
         </div>
+        )}
 
       </main>
 
@@ -1107,113 +1249,259 @@ export default function FinanceAppPage() {
 
       {/* 9. AI Assistant Modal */}
       {isAiModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-fade-in max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl animate-fade-in max-h-[90vh] flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-600" />
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t.aiAssistant}</h3>
-              </div>
-              <button
-                onClick={() => {
-                  setIsAiModalOpen(false);
-                  setAiResult(null);
-                }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500 mb-3">{t.aiSubtitle}</p>
-
-            <textarea
-              rows={5}
-              placeholder={t.aiInputPlaceholder}
-              value={aiInputText}
-              onChange={(e) => setAiInputText(e.target.value)}
-              className="w-full text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 outline-none focus:ring-2 focus:ring-purple-500 mb-3 resize-none"
-            />
-
-            <div className="flex justify-between items-center mb-4">
-              <button
-                type="button"
-                onClick={() => setAiInputText("Started business with 6000$ cash and 2500$ equipment, loan 1000$.\n2026-10-01 sold products 1400$\n2026-10-02 paid salaries 500$\n2026-10-03 paid rent 350$")}
-                className="text-[11px] text-purple-600 dark:text-purple-400 hover:underline"
-              >
-                Namuna matnni kiritish
-              </button>
-              <button
-                type="button"
-                onClick={handleAiAnalyze}
-                disabled={isAiAnalyzing || !aiInputText.trim()}
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs shadow-sm flex items-center gap-1.5"
-              >
-                {isAiAnalyzing ? t.aiAnalyzing : t.aiAnalyze}
-              </button>
-            </div>
-
-            {/* AI Preview Result */}
-            {aiResult && (
-              <div className="flex-1 overflow-y-auto space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-                <div className="font-bold text-slate-700 dark:text-slate-300">{aiResult.summary}</div>
-
-                {/* Balances */}
-                {(aiResult.balances.opening_cash !== null || aiResult.balances.opening_fixed_assets !== null) && (
-                  <div className="p-2.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800">
-                    <span className="font-bold block mb-1 text-purple-800 dark:text-purple-300">{t.aiDetectedBalances}</span>
-                    <div className="flex flex-wrap gap-3 text-slate-700 dark:text-slate-300">
-                      {aiResult.balances.opening_cash !== null && <span>Kassa: <b>${formatNumber(aiResult.balances.opening_cash)}</b></span>}
-                      {aiResult.balances.opening_fixed_assets !== null && <span>Uskunalar: <b>${formatNumber(aiResult.balances.opening_fixed_assets)}</b></span>}
-                      {aiResult.balances.opening_loans !== null && <span>Kredit: <b>${formatNumber(aiResult.balances.opening_loans)}</b></span>}
-                      {aiResult.balances.opening_equity !== null && <span>Kapital: <b>${formatNumber(aiResult.balances.opening_equity)}</b></span>}
-                    </div>
-                  </div>
-                )}
-
-                {/* Transactions Table */}
+                <div className="w-8 h-8 rounded-xl bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
+                </div>
                 <div>
-                  <span className="font-bold block mb-1.5">{t.aiDetectedTxs} ({aiResult.transactions.length})</span>
-                  <div className="table-scroll-container max-h-48 overflow-y-auto">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>{t.date}</th>
-                          <th>{t.type}</th>
-                          <th>{t.category}</th>
-                          <th className="num-col">{t.amount}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {aiResult.transactions.map((tx, idx) => (
-                          <tr key={idx}>
-                            <td className="text-xs font-mono">{tx.date}</td>
-                            <td>
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${tx.type === 'income' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                                {tx.type}
-                              </span>
-                            </td>
-                            <td className="text-xs">{CATEGORIES_META[tx.category]?.[lang] || tx.category}</td>
-                            <td className={`num-col font-semibold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                              ${formatNumber(tx.amount)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <h3 className="text-base sm:text-lg font-bold font-serif text-slate-900 dark:text-white leading-tight">
+                    {t.aiAssistant}
+                  </h3>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold block">
+                    {t.aiModelFreeBadge}
+                  </span>
                 </div>
               </div>
-            )}
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 mt-auto">
+              <div className="flex items-center gap-2">
+                {/* Client IP Badge */}
+                <div 
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-[11px] font-mono text-emerald-700 dark:text-emerald-300"
+                  title={`${t.aiClientIp}: ${clientIp || '127.0.0.1'}`}
+                >
+                  <Wifi className="w-3 h-3 text-emerald-500 animate-pulse" />
+                  <span className="hidden sm:inline">{t.aiClientIp}:</span>
+                  <span className="font-bold">{clientIp || t.aiIpChecking}</span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsAiModalOpen(false);
+                    setAiResult(null);
+                    setUploadedFile(null);
+                  }}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              {t.aiSubtitle}
+            </p>
+
+            <div className="space-y-3 overflow-y-auto pr-1 flex-1">
+              
+              {/* File / Image Upload Area */}
+              <div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileUpload} 
+                  accept="image/*,.csv,.txt,.json" 
+                  className="hidden" 
+                />
+
+                {uploadedFile ? (
+                  <div className="p-3 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {uploadedFile.base64 ? (
+                        <img 
+                          src={uploadedFile.base64} 
+                          alt="preview" 
+                          className="w-14 h-14 object-cover rounded-lg border border-purple-200 dark:border-purple-800 shrink-0" 
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate">
+                          {uploadedFile.name}
+                        </span>
+                        <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold uppercase">
+                          {uploadedFile.type === 'image' ? t.aiImagePreview : `${uploadedFile.type.toUpperCase()} fayl`}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setUploadedFile(null)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      title={t.aiRemoveFile}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-4 px-3 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 rounded-xl bg-slate-50/50 dark:bg-slate-800/40 hover:bg-purple-50/20 dark:hover:bg-purple-950/10 flex flex-col items-center justify-center gap-1.5 transition-all text-slate-600 dark:text-slate-400 cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                      <Camera className="w-5 h-5" />
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {t.aiUploadTitle}
+                    </span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500 text-center max-w-sm">
+                      {t.aiUploadPrompt}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Text Area */}
+              <div>
+                <textarea
+                  rows={4}
+                  placeholder={t.aiInputPlaceholder}
+                  value={aiInputText}
+                  onChange={(e) => setAiInputText(e.target.value)}
+                  className="w-full text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 outline-none focus:ring-2 focus:ring-purple-500 resize-none text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              {/* Action Toolbar */}
+              <div className="flex justify-between items-center flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAiInputText("Started business with 6000$ cash and 2500$ equipment, loan 1000$.\n2026-10-01 sold products 1400$\n2026-10-02 paid salaries 500$\n2026-10-03 paid rent 350$")}
+                    className="text-[11px] text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+                  >
+                    {t.samplePrompt}
+                  </button>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowApiSettings(!showApiSettings)}
+                    className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Key className="w-3 h-3" />
+                    <span>Gemini API (Ixtiyoriy)</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAiAnalyze}
+                  disabled={isAiAnalyzing || (!aiInputText.trim() && !uploadedFile)}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 ${isAiAnalyzing ? 'animate-spin' : ''}`} />
+                  <span>{isAiAnalyzing ? t.aiAnalyzing : t.aiAnalyze}</span>
+                </button>
+              </div>
+
+              {/* Optional Custom API Key accordion */}
+              {showApiSettings && (
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">Shaxsiy Google Gemini Free API Key</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Tizim kalitsiz ham bepul ishlaydi</span>
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="AIzaSy... (bo'sh qoldirsangiz, avtomatik bepul parser ishlatiladi)"
+                    value={customApiKey}
+                    onChange={(e) => setCustomApiKey(e.target.value)}
+                    className="w-full text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Kiritilgan kalit faqat bevosita Google Gemini 1.5 Flash bepul modeliga so'rov yuborish uchun ishlatiladi.
+                  </p>
+                </div>
+              )}
+
+              {/* AI Preview Result */}
+              {aiResult && (
+                <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="font-bold text-slate-700 dark:text-slate-300">{aiResult.summary}</div>
+                    {aiModelUsed && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-mono">
+                        Model: {aiModelUsed}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Balances */}
+                  {(aiResult.balances.opening_cash !== null || aiResult.balances.opening_fixed_assets !== null || aiResult.balances.opening_loans !== null || aiResult.balances.opening_equity !== null) && (
+                    <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800">
+                      <span className="font-bold block mb-1 text-purple-800 dark:text-purple-300">{t.aiDetectedBalances}</span>
+                      <div className="flex flex-wrap gap-3 text-slate-700 dark:text-slate-300 text-xs">
+                        {aiResult.balances.opening_cash !== null && <span>Kassa: <b>${formatNumber(aiResult.balances.opening_cash)}</b></span>}
+                        {aiResult.balances.opening_fixed_assets !== null && <span>Uskunalar: <b>${formatNumber(aiResult.balances.opening_fixed_assets)}</b></span>}
+                        {aiResult.balances.opening_loans !== null && <span>Kredit: <b>${formatNumber(aiResult.balances.opening_loans)}</b></span>}
+                        {aiResult.balances.opening_equity !== null && <span>Kapital: <b>${formatNumber(aiResult.balances.opening_equity)}</b></span>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transactions Table */}
+                  <div>
+                    <span className="font-bold block mb-1.5">{t.aiDetectedTxs} ({aiResult.transactions.length})</span>
+                    <div className="table-scroll-container max-h-48 overflow-y-auto">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>{t.date}</th>
+                            <th>{t.type}</th>
+                            <th>{t.category}</th>
+                            <th>{t.note}</th>
+                            <th className="num-col">{t.amount}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {aiResult.transactions.length === 0 ? (
+                            <tr><td colSpan={5} className="text-center py-4 text-slate-400">{t.empty}</td></tr>
+                          ) : (
+                            aiResult.transactions.map((tx, idx) => (
+                              <tr key={idx}>
+                                <td className="text-xs font-mono">{tx.date}</td>
+                                <td>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${tx.type === 'income' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'}`}>
+                                    {tx.type === 'income' ? t.income : t.expense}
+                                  </span>
+                                </td>
+                                <td className="text-xs font-medium">{CATEGORIES_META[tx.category]?.[lang] || tx.category}</td>
+                                <td className="text-xs text-slate-500">{tx.note || '—'}</td>
+                                <td className={`num-col font-semibold ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  ${formatNumber(tx.amount)}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 mt-3">
               <button
                 type="button"
                 onClick={() => {
                   setIsAiModalOpen(false);
                   setAiResult(null);
+                  setUploadedFile(null);
                 }}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white"
               >
                 {t.close}
               </button>
@@ -1221,12 +1509,13 @@ export default function FinanceAppPage() {
                 <button
                   type="button"
                   onClick={handleApplyAi}
-                  className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm"
+                  className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
                 >
                   {t.aiApply}
                 </button>
               )}
             </div>
+
           </div>
         </div>
       )}

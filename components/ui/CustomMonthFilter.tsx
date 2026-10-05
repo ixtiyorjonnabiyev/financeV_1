@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, RotateCcw } from 'lucide-react';
+import { Language } from '@/lib/types';
 
 interface CustomMonthFilterProps {
   fromMonth: string; // YYYY-MM
@@ -9,19 +10,76 @@ interface CustomMonthFilterProps {
   onChange: (from: string, to: string) => void;
   onReset: () => void;
   availableMonths?: string[];
+  lang?: Language;
 }
 
-const MONTH_NAMES_SHORT = [
-  'Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn',
-  'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'
-];
+const MONTH_NAMES_SHORT: Record<Language, string[]> = {
+  uz: ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'],
+  ru: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+};
+
+const FILTER_LABELS: Record<Language, {
+  period: string;
+  thisMonth: string;
+  last3Months: string;
+  ytd: string;
+  all: string;
+  from: string;
+  to: string;
+  start: string;
+  end: string;
+  select: string;
+  reset: string;
+}> = {
+  uz: {
+    period: 'Davr:',
+    thisMonth: 'Bu oy',
+    last3Months: 'Oxirgi 3 oy',
+    ytd: 'Yil boshi',
+    all: 'Barchasi',
+    from: 'Boshlanish:',
+    to: 'Tugash:',
+    start: 'Boshi',
+    end: 'Oxiri',
+    select: 'Tanlang',
+    reset: 'Tozalash'
+  },
+  ru: {
+    period: 'Период:',
+    thisMonth: 'Этот месяц',
+    last3Months: 'Посл. 3 месяца',
+    ytd: 'С начала года',
+    all: 'Все',
+    from: 'С месяца:',
+    to: 'По месяц:',
+    start: 'Начало',
+    end: 'Конец',
+    select: 'Выбрать',
+    reset: 'Сбросить'
+  },
+  en: {
+    period: 'Period:',
+    thisMonth: 'This month',
+    last3Months: 'Last 3 months',
+    ytd: 'YTD',
+    all: 'All',
+    from: 'From:',
+    to: 'To:',
+    start: 'Start',
+    end: 'End',
+    select: 'Select',
+    reset: 'Reset'
+  }
+};
 
 export function CustomMonthFilter({
   fromMonth,
   toMonth,
   onChange,
   onReset,
-  availableMonths = []
+  availableMonths = [],
+  lang = 'uz'
 }: CustomMonthFilterProps) {
   const [activePicker, setActivePicker] = useState<'from' | 'to' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,11 +144,14 @@ export function CustomMonthFilter({
     }
   };
 
+  const labels = FILTER_LABELS[lang] || FILTER_LABELS.uz;
+  const monthNames = MONTH_NAMES_SHORT[lang] || MONTH_NAMES_SHORT.uz;
+
   const formatMonthLabel = (ym: string) => {
-    if (!ym) return 'Tanlang';
+    if (!ym) return labels.select;
     const [y, m] = ym.split('-');
     const mIdx = parseInt(m) - 1;
-    return `${MONTH_NAMES_SHORT[mIdx] || m}, ${y}`;
+    return `${monthNames[mIdx] || m}, ${y}`;
   };
 
   return (
@@ -100,7 +161,7 @@ export function CustomMonthFilter({
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 mr-2">
           <Calendar className="w-4 h-4 text-sky-500" />
-          <span>Davr:</span>
+          <span>{labels.period}</span>
         </div>
 
         {/* Preset Pills */}
@@ -114,21 +175,21 @@ export function CustomMonthFilter({
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Bu oy
+            {labels.thisMonth}
           </button>
           <button
             type="button"
             onClick={() => handlePreset('last_3_months')}
             className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
           >
-            Oxirgi 3 oy
+            {labels.last3Months}
           </button>
           <button
             type="button"
             onClick={() => handlePreset('ytd')}
             className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
           >
-            Yil boshi
+            {labels.ytd}
           </button>
           <button
             type="button"
@@ -139,7 +200,7 @@ export function CustomMonthFilter({
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Barchasi
+            {labels.all}
           </button>
         </div>
       </div>
@@ -153,8 +214,8 @@ export function CustomMonthFilter({
             onClick={() => setActivePicker(activePicker === 'from' ? null : 'from')}
             className="h-8 px-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 transition-all"
           >
-            <span className="text-slate-400 font-normal text-[11px]">Boshlanish:</span>
-            <span>{fromMonth ? formatMonthLabel(fromMonth) : 'Boshi'}</span>
+            <span className="text-slate-400 font-normal text-[11px]">{labels.from}</span>
+            <span>{fromMonth ? formatMonthLabel(fromMonth) : labels.start}</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
@@ -178,7 +239,7 @@ export function CustomMonthFilter({
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-1 text-center">
-                {MONTH_NAMES_SHORT.map((name, idx) => {
+                {monthNames.map((name, idx) => {
                   const ym = `${fromYear}-${(idx + 1).toString().padStart(2, '0')}`;
                   const isSelected = fromMonth === ym;
                   return (
@@ -208,8 +269,8 @@ export function CustomMonthFilter({
             onClick={() => setActivePicker(activePicker === 'to' ? null : 'to')}
             className="h-8 px-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 transition-all"
           >
-            <span className="text-slate-400 font-normal text-[11px]">Tugash:</span>
-            <span>{toMonth ? formatMonthLabel(toMonth) : 'Oxiri'}</span>
+            <span className="text-slate-400 font-normal text-[11px]">{labels.to}</span>
+            <span>{toMonth ? formatMonthLabel(toMonth) : labels.end}</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
@@ -233,7 +294,7 @@ export function CustomMonthFilter({
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-1 text-center">
-                {MONTH_NAMES_SHORT.map((name, idx) => {
+                {monthNames.map((name, idx) => {
                   const ym = `${toYear}-${(idx + 1).toString().padStart(2, '0')}`;
                   const isSelected = toMonth === ym;
                   return (
@@ -262,7 +323,7 @@ export function CustomMonthFilter({
             type="button"
             onClick={onReset}
             className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 transition-colors"
-            title="Filterni tozalash"
+            title={labels.reset}
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>

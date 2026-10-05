@@ -2,26 +2,40 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Language } from '@/lib/types';
 
 interface CustomDatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (value: string) => void;
   label?: string;
   className?: string;
+  lang?: Language;
 }
 
-const MONTH_NAMES_UZ = [
-  'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-  'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'
-];
+const MONTH_NAMES: Record<Language, string[]> = {
+  uz: ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'],
+  ru: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+};
 
-const WEEKDAY_NAMES_UZ = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+const WEEKDAY_NAMES: Record<Language, string[]> = {
+  uz: ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'],
+  ru: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+  en: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+};
+
+const LABELS: Record<Language, { today: string; close: string }> = {
+  uz: { today: 'Bugun', close: 'Yopish' },
+  ru: { today: 'Сегодня', close: 'Закрыть' },
+  en: { today: 'Today', close: 'Close' }
+};
 
 export function CustomDatePicker({
   value,
   onChange,
   label,
-  className = ''
+  className = '',
+  lang = 'uz'
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -125,7 +139,7 @@ export function CustomDatePicker({
               <ChevronLeft className="w-4 h-4" />
             </button>
             <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-              {MONTH_NAMES_UZ[viewMonth]} {viewYear}
+              {MONTH_NAMES[lang][viewMonth]} {viewYear}
             </div>
             <button
               type="button"
@@ -138,7 +152,7 @@ export function CustomDatePicker({
 
           {/* Weekday Labels */}
           <div className="grid grid-cols-7 gap-1 text-center mb-1">
-            {WEEKDAY_NAMES_UZ.map((d, i) => (
+            {WEEKDAY_NAMES[lang].map((d, i) => (
               <span key={i} className="text-[10px] font-bold text-slate-400">
                 {d}
               </span>
@@ -185,14 +199,14 @@ export function CustomDatePicker({
               onClick={handleSetToday}
               className="text-[11px] font-semibold text-sky-600 hover:underline"
             >
-              Bugun
+              {LABELS[lang].today}
             </button>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
               className="text-[11px] text-slate-400 hover:text-slate-600"
             >
-              Yopish
+              {LABELS[lang].close}
             </button>
           </div>
         </div>
